@@ -10,6 +10,7 @@ Parts:
  - 3x MAX7219 8x32 LED-matrix with on-board driver from AZDelivery
  - 4-channel bi-directional logic level converter (3.3V to 5V and v.v.)
  - power switch
+ - micro USB connection board for power delivery
 
 Ferrie J Bank,
 Amsterdam 20 September 2020
