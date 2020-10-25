@@ -9,43 +9,36 @@ const char* password = "E3asv6vauwdk";
 #define HARDWARE_TYPE MD_MAX72XX::FC16_HW
 #define MAX_DEVICES 4
 
-#define CLK_PIN   1
-#define CS_PIN    2
-#define DATA_PIN  3
+#define CLK_PIN   14
+#define CS_PIN    15
+#define DATA_PIN  13
 
 
 MD_Parola P = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 MD_MAX72XX *MAX = P.getGraphicObject();
 
-uint8_t scrollSpeed = 60;
+uint8_t scrollSpeed = 35;
 textEffect_t scrollEffect = PA_SCROLL_LEFT;
 textPosition_t scrollAlign = PA_LEFT;
-uint16_t scrollPause = 0;
 
 int const bufferSize = 8192;
-char myBuffer[bufferSize] = {"Initialization imminent!"};
+char myBuffer[bufferSize] = {"Welcome to the News Ticker :-) by Ferrie J Bank (c) 2020"};
 String payload;
 boolean bufferDirty = false;
 
-int newsRefreshDelaySecs = 30;
-int newsRefreshCounter = -1;
+unsigned long lastReadTime = 0;
+unsigned long readTimeDelay = 600000; // refresh news every 10 minutes
  
 void setup () {
 
   displayInit();
-
-  Serial.begin(115200);
-  while (!Serial) delay(200);
   
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
    
     delay(500);
-    Serial.print(".");
   }
-
-  Serial.println("Connection established!");
 }
 
 void displayInit() {
@@ -55,42 +48,36 @@ void displayInit() {
   P.displaySuspend(false);
   P.setIntensity(0);
 
- // P.displayScroll(myBuffer, scrollAlign, scrollEffect, scrollSpeed);
+  P.displayScroll(myBuffer, scrollAlign, scrollEffect, scrollSpeed);
   
- // while (!P.displayAnimate()) {yield();}
+  while (!P.displayAnimate()) {yield();}
 }
 
 
 void loop() {
   
-  newsRefreshCounter++;
-  evaluateCounter();
   readNews();
   
   if (bufferDirty) {
 
     bufferDirty = false;
-    
+
+    MAX->clear();
     payload.toCharArray(myBuffer, bufferSize);
-  //  P.displayReset();
-    P.displayScroll(myBuffer, scrollAlign, scrollEffect, scrollSpeed);
-    
+    P.displayReset();
   }
 
-  while (!P.displayAnimate()) {yield();}
-}
-
-void evaluateCounter() {
-
-  if (newsRefreshCounter >= newsRefreshDelaySecs) newsRefreshCounter = 0;  
+  if (P.displayAnimate()) {
+    P.displayReset();
+  }
 }
 
 void readNews() {
 
-  Serial.print("counter ");
-  Serial.println(newsRefreshCounter);
+  unsigned long diff = millis() - lastReadTime;
+  if ((lastReadTime > 0) && diff < readTimeDelay) return;
   
-  if (newsRefreshCounter > 0) return;
+  lastReadTime = millis();
 
   if (WiFi.status() == WL_CONNECTED) {
      
@@ -103,9 +90,6 @@ void readNews() {
        
       payload = http.getString();
       bufferDirty = true;
-      
-      Serial.println(httpCode);
-      Serial.println(payload);
     }
      
     http.end();
