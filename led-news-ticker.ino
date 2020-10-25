@@ -17,17 +17,25 @@ const char* password = "E3asv6vauwdk";
 MD_Parola P = MD_Parola(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 MD_MAX72XX *MAX = P.getGraphicObject();
 
-char myBuffer[] = "";
+uint8_t scrollSpeed = 60;
+textEffect_t scrollEffect = PA_SCROLL_LEFT;
+textPosition_t scrollAlign = PA_LEFT;
+uint16_t scrollPause = 0;
+
+int const bufferSize = 8192;
+char myBuffer[bufferSize] = {"Initialization imminent!"};
+String payload;
+boolean bufferDirty = false;
+
+int newsRefreshDelaySecs = 30;
+int newsRefreshCounter = -1;
  
 void setup () {
 
   displayInit();
-  showText("start");
 
   Serial.begin(115200);
   while (!Serial) delay(200);
-  Serial.println("");
-  Serial.print("start");
   
   WiFi.begin(ssid, password);
 
@@ -37,13 +45,54 @@ void setup () {
     Serial.print(".");
   }
 
-  Serial.println("OK");
   Serial.println("Connection established!");
+}
+
+void displayInit() {
+
+  P.begin();
+  P.displayClear();
+  P.displaySuspend(false);
+  P.setIntensity(0);
+
+ // P.displayScroll(myBuffer, scrollAlign, scrollEffect, scrollSpeed);
   
-  showText("OK");
-  showText("Connection established!");
+ // while (!P.displayAnimate()) {yield();}
+}
+
+
+void loop() {
   
-  if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
+  newsRefreshCounter++;
+  evaluateCounter();
+  readNews();
+  
+  if (bufferDirty) {
+
+    bufferDirty = false;
+    
+    payload.toCharArray(myBuffer, bufferSize);
+  //  P.displayReset();
+    P.displayScroll(myBuffer, scrollAlign, scrollEffect, scrollSpeed);
+    
+  }
+
+  while (!P.displayAnimate()) {yield();}
+}
+
+void evaluateCounter() {
+
+  if (newsRefreshCounter >= newsRefreshDelaySecs) newsRefreshCounter = 0;  
+}
+
+void readNews() {
+
+  Serial.print("counter ");
+  Serial.println(newsRefreshCounter);
+  
+  if (newsRefreshCounter > 0) return;
+
+  if (WiFi.status() == WL_CONNECTED) {
      
     HTTPClient http;
      
@@ -52,36 +101,13 @@ void setup () {
      
     if (httpCode > 0) {
        
-      String payload = http.getString();
-      showText(payload);
+      payload = http.getString();
+      bufferDirty = true;
+      
+      Serial.println(httpCode);
+      Serial.println(payload);
     }
      
     http.end();
   }
-}
-
-void displayInit() {
-
-  P.begin();
-  
-  P.setSpeed(100);
-  P.setPause(2000);
-  P.setIntensity(0);
-  
-  P.setTextEffect(PA_SCROLL_LEFT, PA_SCROLL_LEFT);
-  P.displayClear();
-}
-
-void showText(String input) {
-
-  input.toCharArray(myBuffer, 2048);
-
-  P.displayClear();
-  P.setTextBuffer(myBuffer);
-  P.displayReset();
-}
-
-
-void loop() {
-  P.displayAnimate();
 }
