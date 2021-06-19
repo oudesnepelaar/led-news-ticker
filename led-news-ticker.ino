@@ -4,8 +4,8 @@
 #include <MD_Parola.h>
 #include <SPI.h>
  
-const char* ssid = "ZiggoA72811A";
-const char* password = "E3asv6vauwdk";
+const char* ssid = "<INSERT>";
+const char* password = "<INSERT>";
 
 #define HARDWARE_TYPE MD_MAX72XX::FC16_HW
 #define MAX_DEVICES 8
@@ -83,7 +83,7 @@ void readNews() {
      
     HTTPClient http;
      
-    http.begin("http://scrapert-env-1.eba-czz2mtaz.us-east-2.elasticbeanstalk.com/mix");
+    http.begin("<INSERT>");
     int httpCode = http.GET();
      
     if (httpCode > 0) {
